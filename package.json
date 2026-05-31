@@ -1,0 +1,32 @@
+{
+  "name": "@invariance/soma-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for Invariance Soma — exposes the same data the dashboard shows to coding agents",
+  "type": "module",
+  "bin": {
+    "soma-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@invariance/soma-cli": "file:../soma-cli",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.19",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
