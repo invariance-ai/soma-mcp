@@ -49,7 +49,7 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("soma-mcp tools", () => {
-  it("registers all eight tools", async () => {
+  it("registers all eleven tools", async () => {
     mockBackend(() => ({ status: 200, body: {} }));
     const client = await connect();
     const names = (await client.listTools()).tools.map((t) => t.name).sort();
@@ -57,7 +57,10 @@ describe("soma-mcp tools", () => {
       "soma_ask",
       "soma_code_graph",
       "soma_connectors",
+      "soma_dashboards",
       "soma_findings",
+      "soma_log_streams",
+      "soma_logs",
       "soma_people",
       "soma_person_activity",
       "soma_receipts",
@@ -99,6 +102,66 @@ describe("soma-mcp tools", () => {
       structuredContent?: { findings: unknown[] };
     };
     expect(res.structuredContent?.findings).toHaveLength(1);
+  });
+
+  it("soma_logs returns text + structuredContent", async () => {
+    mockBackend((p) =>
+      p === "/v1/logs"
+        ? {
+            status: 200,
+            body: {
+              logs: [
+                {
+                  id: "log_1",
+                  stream: "logs",
+                  level: "error",
+                  service: "checkout",
+                  env: "prod",
+                  message: "checkout timeout",
+                  occurred_at: "2026-06-01T00:00:00.000Z",
+                },
+              ],
+            },
+          }
+        : { status: 200, body: {} },
+    );
+    const client = await connect();
+    const res = (await client.callTool({ name: "soma_logs", arguments: { level: "error" } })) as {
+      content: { text: string }[];
+      structuredContent?: { logs: unknown[] };
+    };
+    expect(res.content[0]!.text).toContain("checkout timeout");
+    expect(res.structuredContent?.logs).toHaveLength(1);
+  });
+
+  it("soma_log_streams returns stream summaries", async () => {
+    mockBackend((p) =>
+      p === "/v1/logs/streams"
+        ? { status: 200, body: { streams: [{ name: "logs", count: 10, errorCount: 2 }] } }
+        : { status: 200, body: {} },
+    );
+    const client = await connect();
+    const res = (await client.callTool({ name: "soma_log_streams", arguments: {} })) as {
+      content: { text: string }[];
+      structuredContent?: { streams: unknown[] };
+    };
+    expect(res.content[0]!.text).toContain("logs");
+    expect(res.structuredContent?.streams).toHaveLength(1);
+  });
+
+  it("soma_dashboards returns saved dashboards", async () => {
+    mockBackend((p) =>
+      p === "/v1/dashboards"
+        ? { status: 200, body: { dashboards: [{ id: "dash_1", name: "Ops", slug: "ops", tiles: [] }] } }
+        : { status: 200, body: {} },
+    );
+    const client = await connect();
+    const res = (await client.callTool({ name: "soma_dashboards", arguments: {} })) as {
+      content: { text: string }[];
+      structuredContent?: { dashboards: unknown[] };
+    };
+    expect(res.content[0]!.text).toContain("Ops");
+    expect(res.structuredContent?.dashboards).toHaveLength(1);
   });
 
   it("surfaces backend errors as isError tool results", async () => {
