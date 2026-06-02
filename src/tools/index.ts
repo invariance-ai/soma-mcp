@@ -13,7 +13,10 @@ import {
   extractPersonQuery,
   formatCodeGraph,
   formatConnectors,
+  formatDashboards,
   formatFindings,
+  formatLogs,
+  formatLogStreams,
   formatPeople,
   formatPersonActivity,
   formatReceipts,
@@ -103,6 +106,68 @@ export function registerTools(server: McpServer): void {
     guard(async (args: { source?: string; kind?: string; since?: string; limit?: number }) => {
       const receipts = await client().listReceipts(args);
       return { content: text(formatReceipts(receipts)), structuredContent: { receipts } };
+    }),
+  );
+
+  server.registerTool(
+    "soma_logs",
+    {
+      title: "Query logs / telemetry",
+      description:
+        "Query logs, HTTP access logs, distributed traces, user sessions, and agent run traces " +
+        "with optional stream/level/service/env/q/since/limit filters.",
+      inputSchema: {
+        stream: z.string().optional().describe("logs | access | trace | session | agent"),
+        level: z.string().optional().describe("debug | info | warn | error"),
+        service: z.string().optional(),
+        env: z.string().optional().describe("prod | staging"),
+        q: z.string().optional().describe("free-text search against the message"),
+        since: z.string().optional().describe("ISO timestamp; logs on/after this"),
+        limit: z.number().int().positive().optional(),
+      },
+      outputSchema: { logs: z.array(z.any()) },
+    },
+    guard(
+      async (args: {
+        stream?: string;
+        level?: string;
+        service?: string;
+        env?: string;
+        q?: string;
+        since?: string;
+        limit?: number;
+      }) => {
+        const logs = await client().listLogs(args);
+        return { content: text(formatLogs(logs)), structuredContent: { logs } };
+      },
+    ),
+  );
+
+  server.registerTool(
+    "soma_log_streams",
+    {
+      title: "Summarize log streams",
+      description: "Per-stream event + error counts across logs, access, traces, sessions and agent runs.",
+      inputSchema: {},
+      outputSchema: { streams: z.array(z.any()) },
+    },
+    guard(async () => {
+      const streams = await client().listLogStreams();
+      return { content: text(formatLogStreams(streams)), structuredContent: { streams } };
+    }),
+  );
+
+  server.registerTool(
+    "soma_dashboards",
+    {
+      title: "List dashboards",
+      description: "List saved Visualizations dashboards (name, slug, tile count) for the workspace.",
+      inputSchema: {},
+      outputSchema: { dashboards: z.array(z.any()) },
+    },
+    guard(async () => {
+      const dashboards = await client().listDashboards();
+      return { content: text(formatDashboards(dashboards)), structuredContent: { dashboards } };
     }),
   );
 
